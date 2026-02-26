@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::path::Path;
 
 use extism_pdk::*;
 use proto_pdk::*;
@@ -50,7 +49,7 @@ pub fn download_prebuilt(
 
     if version_spec.is_canary() {
         return Err(plugin_err!(PluginError::Message(format!(
-            "{NAME} does not support canary/nightly versions. Plase use `proto install dart beta` instead"
+            "{NAME} does not support canary/nightly versions. Please use `proto install dart beta` instead"
         ))));
     }
 
@@ -60,7 +59,13 @@ pub fn download_prebuilt(
         HostOS::Linux => "linux",
         HostOS::MacOS => "macos",
         HostOS::Windows => "windows",
-        _ => unreachable!(),
+        _ => {
+            return Err(PluginError::UnsupportedOS {
+                tool: NAME.to_owned(),
+                os: env.os.to_string(),
+            }
+            .into())
+        }
     };
     let arch = match env.arch {
         HostArch::Riscv64 => "riscv64",
@@ -68,7 +73,13 @@ pub fn download_prebuilt(
         HostArch::X64 => "x64",
         HostArch::Arm => "arm",
         HostArch::Arm64 => "arm64",
-        _ => unreachable!(),
+        _ => {
+            return Err(plugin_err!(PluginError::UnsupportedTarget {
+                tool: NAME.to_owned(),
+                arch: env.arch.to_string(),
+                os: env.os.to_string(),
+            }))
+        }
     };
     let version = version_spec.as_version().unwrap();
     let channel = if version.pre.is_empty() {
@@ -154,6 +165,10 @@ pub fn check_version_for_os_and_arch(
     let version = version_spec.as_version().unwrap();
 
     let unresolved_version_spec_option = match env.os {
+        // Linux ia32 (x86) builds were dropped starting from Dart 3.8.0
+        // Linux ARM builds first appeared in 1.12.0
+        // Linux ARM64 builds first appeared in 1.23.0
+        // Linux RISC-V 64 beta builds first appeared in 3.0.0-290.2.beta, stable in 3.3.0
         HostOS::Linux => match env.arch {
             HostArch::X86
                 if version_spec
@@ -191,6 +206,8 @@ pub fn check_version_for_os_and_arch(
             }
             _ => None::<UnresolvedVersionSpec>,
         },
+        // macOS ia32 (x86) builds were dropped starting from Dart 2.8.0
+        // macOS ARM64 (Apple Silicon) builds first appeared in 2.14.1
         HostOS::MacOS => match env.arch {
             HostArch::X86
                 if version_spec
@@ -206,6 +223,8 @@ pub fn check_version_for_os_and_arch(
             }
             _ => None::<UnresolvedVersionSpec>,
         },
+        // Windows ia32 (x86) builds were dropped starting from Dart 2.8.0
+        // Windows ARM64 beta builds first appeared in 3.2.0-42.2.beta, stable in 3.3.0
         HostOS::Windows => match env.arch {
             HostArch::X86
                 if version_spec
@@ -263,30 +282,33 @@ pub fn add_versions_for_channel(
     ))?;
     let res = fetch_json::<String, DartPrefixes>(format!("https://storage.googleapis.com/storage/v1/b/dart-archive/o?delimiter=%2F&prefix=channels%2F{channel}%2Frelease%2F&alt=json"))?;
 
+    // Prefixes are GCS paths like "channels/stable/release/3.7.1/"
     for item in res.prefixes.iter() {
-        if let Some(version_as_os_str) = Path::new(&item).file_name() {
-            if let Some(version_as_str) = version_as_os_str.to_str() {
-                if let Ok(version_spec) = VersionSpec::parse(version_as_str) {
-                    if version_spec.as_version().is_some()
-                        && !output.versions.contains(&version_spec)
-                        && check_version_for_os_and_arch(env, &version_spec).is_ok()
-                    {
-                        output.versions.push(version_spec.clone());
+        let version_as_str = item.trim_end_matches('/').rsplit('/').next().unwrap_or("");
 
-                        if latest.version == version_as_str {
-                            output
-                                .aliases
-                                .insert(channel.to_string(), version_spec.to_unresolved_spec());
+        let Ok(version_spec) = VersionSpec::parse(version_as_str) else {
+            continue;
+        };
 
-                            if channel == "stable" {
-                                output
-                                    .aliases
-                                    .insert("latest".into(), version_spec.to_unresolved_spec());
-                                output.latest = Some(version_spec.to_unresolved_spec());
-                            }
-                        }
-                    }
-                }
+        if version_spec.as_version().is_none()
+            || output.versions.contains(&version_spec)
+            || check_version_for_os_and_arch(env, &version_spec).is_err()
+        {
+            continue;
+        }
+
+        output.versions.push(version_spec.clone());
+
+        if latest.version == version_as_str {
+            output
+                .aliases
+                .insert(channel.to_string(), version_spec.to_unresolved_spec());
+
+            if channel == "stable" {
+                output
+                    .aliases
+                    .insert("latest".into(), version_spec.to_unresolved_spec());
+                output.latest = Some(version_spec.to_unresolved_spec());
             }
         }
     }
