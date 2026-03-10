@@ -92,5 +92,4 @@ cargo build --target wasm32-wasip1
 
 ## Support
 
-If you find this plugin useful, please give it a star on GitHub — it helps others discover the project\!
-
+If you find this plugin useful, please give it a star on GitHub — it helps others discover the project!
