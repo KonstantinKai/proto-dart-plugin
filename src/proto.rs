@@ -17,12 +17,18 @@ static NAME: &str = "Dart";
 pub fn register_tool(Json(_): Json<RegisterToolInput>) -> FnResult<Json<RegisterToolOutput>> {
     Ok(Json(RegisterToolOutput {
         name: NAME.into(),
-        minimum_proto_version: Some(Version::new(0, 46, 0)),
+        minimum_proto_version: Some(Version::new(0, 56, 0)),
         type_of: PluginType::Language,
         default_install_strategy: InstallStrategy::DownloadPrebuilt,
-        config_schema: Some(SchemaBuilder::build_root::<DartPluginConfig>()),
         plugin_version: Version::parse(env!("CARGO_PKG_VERSION")).ok(),
         ..RegisterToolOutput::default()
+    }))
+}
+
+#[plugin_fn]
+pub fn define_tool_config(_: ()) -> FnResult<Json<DefineToolConfigOutput>> {
+    Ok(Json(DefineToolConfigOutput {
+        schema: SchemaBuilder::build_root::<DartPluginConfig>(),
     }))
 }
 
@@ -82,7 +88,7 @@ pub fn download_prebuilt(
         }
     };
     let version = version_spec.as_version().unwrap();
-    let channel = if version.pre.is_empty() {
+    let channel = if version.prerelease.is_none() {
         "stable"
     } else {
         "beta"
@@ -170,37 +176,23 @@ pub fn check_version_for_os_and_arch(
         // Linux ARM64 builds first appeared in 1.23.0
         // Linux RISC-V 64 beta builds first appeared in 3.0.0-290.2.beta, stable in 3.3.0
         HostOS::Linux => match env.arch {
-            HostArch::X86
-                if version_spec
-                    .ge(VersionSpec::Semantic(SemVer(Version::new(3, 8, 0))).as_ref()) =>
-            {
+            HostArch::X86 if *version >= Version::new(3, 8, 0) => {
                 UnresolvedVersionSpec::parse("<3.8.0").ok()
             }
-            HostArch::Arm
-                if version_spec
-                    .lt(VersionSpec::Semantic(SemVer(Version::new(1, 12, 0))).as_ref()) =>
-            {
+            HostArch::Arm if *version < Version::new(1, 12, 0) => {
                 UnresolvedVersionSpec::parse(">=1.12.0").ok()
             }
-            HostArch::Arm64
-                if version_spec
-                    .lt(VersionSpec::Semantic(SemVer(Version::new(1, 23, 0))).as_ref()) =>
-            {
+            HostArch::Arm64 if *version < Version::new(1, 23, 0) => {
                 UnresolvedVersionSpec::parse(">=1.23.0").ok()
             }
             HostArch::Riscv64
-                if !version.pre.is_empty()
-                    && version_spec.lt(VersionSpec::Semantic(SemVer(
-                        Version::parse("3.0.0-290.2.beta").ok().unwrap(),
-                    ))
-                    .as_ref()) =>
+                if version.prerelease.is_some()
+                    && *version < Version::parse("3.0.0-290.2.beta").unwrap() =>
             {
                 UnresolvedVersionSpec::parse(">=3.0.0-290.2.beta").ok()
             }
             HostArch::Riscv64
-                if version.pre.is_empty()
-                    && version_spec
-                        .lt(VersionSpec::Semantic(SemVer(Version::new(3, 3, 0))).as_ref()) =>
+                if version.prerelease.is_none() && *version < Version::new(3, 3, 0) =>
             {
                 UnresolvedVersionSpec::parse(">=3.3.0").ok()
             }
@@ -209,16 +201,10 @@ pub fn check_version_for_os_and_arch(
         // macOS ia32 (x86) builds were dropped starting from Dart 2.8.0
         // macOS ARM64 (Apple Silicon) builds first appeared in 2.14.1
         HostOS::MacOS => match env.arch {
-            HostArch::X86
-                if version_spec
-                    .gt(VersionSpec::Semantic(SemVer(Version::new(2, 7, 0))).as_ref()) =>
-            {
+            HostArch::X86 if *version > Version::new(2, 7, 0) => {
                 UnresolvedVersionSpec::parse("<2.8.0").ok()
             }
-            HostArch::Arm64
-                if version_spec
-                    .lt(VersionSpec::Semantic(SemVer(Version::new(2, 14, 1))).as_ref()) =>
-            {
+            HostArch::Arm64 if *version < Version::new(2, 14, 1) => {
                 UnresolvedVersionSpec::parse(">=2.14.1").ok()
             }
             _ => None::<UnresolvedVersionSpec>,
@@ -226,25 +212,17 @@ pub fn check_version_for_os_and_arch(
         // Windows ia32 (x86) builds were dropped starting from Dart 2.8.0
         // Windows ARM64 beta builds first appeared in 3.2.0-42.2.beta, stable in 3.3.0
         HostOS::Windows => match env.arch {
-            HostArch::X86
-                if version_spec
-                    .gt(VersionSpec::Semantic(SemVer(Version::new(2, 7, 0))).as_ref()) =>
-            {
+            HostArch::X86 if *version > Version::new(2, 7, 0) => {
                 UnresolvedVersionSpec::parse("<2.8.0").ok()
             }
             HostArch::Arm64
-                if !version.pre.is_empty()
-                    && version_spec.lt(VersionSpec::Semantic(SemVer(
-                        Version::parse("3.2.0-42.2.beta").ok().unwrap(),
-                    ))
-                    .as_ref()) =>
+                if version.prerelease.is_some()
+                    && *version < Version::parse("3.2.0-42.2.beta").unwrap() =>
             {
                 UnresolvedVersionSpec::parse(">=3.2.0-42.2.beta").ok()
             }
             HostArch::Arm64
-                if version.pre.is_empty()
-                    && version_spec
-                        .lt(VersionSpec::Semantic(SemVer(Version::new(3, 3, 0))).as_ref()) =>
+                if version.prerelease.is_none() && *version < Version::new(3, 3, 0) =>
             {
                 UnresolvedVersionSpec::parse(">=3.3.0").ok()
             }
@@ -255,7 +233,7 @@ pub fn check_version_for_os_and_arch(
 
     match unresolved_version_spec_option {
         Some(unresolved_version_spec) => match unresolved_version_spec {
-            UnresolvedVersionSpec::Req(req) => {
+            UnresolvedVersionSpec::Requirement(req) => {
                 let arch = env.arch.to_string();
 
                 Err(plugin_err!(PluginError::Message(format!(

@@ -66,7 +66,7 @@ environment:
 
         let _ = plugin
             .download_prebuilt(DownloadPrebuiltInput {
-                context: ToolContext {
+                context: PluginContext {
                     version: VersionSpec::parse("3.8.0").unwrap(),
                     ..Default::default()
                 },
@@ -87,7 +87,7 @@ environment:
 
         let _ = plugin
             .download_prebuilt(DownloadPrebuiltInput {
-                context: ToolContext {
+                context: PluginContext {
                     version: VersionSpec::parse("1.11.0").unwrap(),
                     ..Default::default()
                 },
@@ -108,7 +108,7 @@ environment:
 
         let _ = plugin
             .download_prebuilt(DownloadPrebuiltInput {
-                context: ToolContext {
+                context: PluginContext {
                     version: VersionSpec::parse("1.22.0").unwrap(),
                     ..Default::default()
                 },
@@ -129,7 +129,7 @@ environment:
 
         let _ = plugin
             .download_prebuilt(DownloadPrebuiltInput {
-                context: ToolContext {
+                context: PluginContext {
                     version: VersionSpec::parse("3.2.0").unwrap(),
                     ..Default::default()
                 },
@@ -150,7 +150,7 @@ environment:
 
         let _ = plugin
             .download_prebuilt(DownloadPrebuiltInput {
-                context: ToolContext {
+                context: PluginContext {
                     version: VersionSpec::parse("3.0.0-290.1.beta").unwrap(),
                     ..Default::default()
                 },
@@ -171,7 +171,7 @@ environment:
 
         let _ = plugin
             .download_prebuilt(DownloadPrebuiltInput {
-                context: ToolContext {
+                context: PluginContext {
                     version: VersionSpec::parse("2.8.0").unwrap(),
                     ..Default::default()
                 },
@@ -192,7 +192,7 @@ environment:
 
         let _ = plugin
             .download_prebuilt(DownloadPrebuiltInput {
-                context: ToolContext {
+                context: PluginContext {
                     version: VersionSpec::parse("2.14.0").unwrap(),
                     ..Default::default()
                 },
@@ -213,7 +213,7 @@ environment:
 
         let _ = plugin
             .download_prebuilt(DownloadPrebuiltInput {
-                context: ToolContext {
+                context: PluginContext {
                     version: VersionSpec::parse("2.8.0").unwrap(),
                     ..Default::default()
                 },
@@ -234,7 +234,7 @@ environment:
 
         let _ = plugin
             .download_prebuilt(DownloadPrebuiltInput {
-                context: ToolContext {
+                context: PluginContext {
                     version: VersionSpec::parse("3.2.0").unwrap(),
                     ..Default::default()
                 },
@@ -255,7 +255,7 @@ environment:
 
         let _ = plugin
             .download_prebuilt(DownloadPrebuiltInput {
-                context: ToolContext {
+                context: PluginContext {
                     version: VersionSpec::parse("3.2.0-42.1.beta").unwrap(),
                     ..Default::default()
                 },

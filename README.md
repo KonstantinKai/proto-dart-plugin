@@ -5,7 +5,7 @@
 
 A community [WASM plugin](https://moonrepo.dev/docs/proto/wasm-plugin) for [proto](https://github.com/moonrepo/proto) that manages [Dart](https://dart.dev/) SDK versions.
 
-Requires [proto](https://github.com/moonrepo/proto) >= 0.46.0
+Requires [proto](https://github.com/moonrepo/proto) >= 0.56.0
 
 **NOTE:** If you are using the [proto-flutter-plugin](https://github.com/KonstantinKai/proto-flutter-plugin), you don't need this plugin in most cases — Flutter bundles Dart.
 

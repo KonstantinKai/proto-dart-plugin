@@ -8,10 +8,15 @@ mod dart_tool {
         let sandbox = create_empty_proto_sandbox();
         let plugin = sandbox.create_plugin("dart-test").await;
 
-        let metadata = plugin.register_tool(RegisterToolInput::default()).await;
+        let metadata = plugin
+            .register_tool(RegisterToolInput {
+                id: Id::raw("dart"),
+                ..Default::default()
+            })
+            .await;
 
         assert_eq!(metadata.name, "Dart");
-        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 46, 0)));
+        assert_eq!(metadata.minimum_proto_version, Some(Version::new(0, 56, 0)));
         assert_eq!(
             metadata.default_install_strategy,
             InstallStrategy::DownloadPrebuilt
